@@ -1,58 +1,48 @@
+import os
 import requests
 import smtplib
 from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from datetime import datetime
-import os
 
-# Credenciales (se leen de los Secrets de GitHub)
-GMAIL_USER = os.environ.get("GMAIL_USER")
-GMAIL_APP_PASSWORD = os.environ.get("GMAIL_APP_PASSWORD")
-DESTINATARIO = os.environ.get("DESTINATARIO")
+GMAIL_USER = os.environ["GMAIL_USER"]
+GMAIL_APP_PASSWORD = os.environ["GMAIL_APP_PASSWORD"]
+DESTINATARIO = os.environ["DESTINATARIO"]
 
-def enviar_reporte():
-    try:
-        # Obtener precio del oro
-        response = requests.get("https://api.gold-api.com/price/XAU", timeout=15)
-        response.raise_for_status()
-        data = response.json()
-        
-        price = data["price"]
-        updated = data.get("updatedAtReadable", "desconocido")
-        fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
-        
-        # Crear el correo
-        asunto = f"Reporte Diario del Oro - {fecha}"
-        
-        cuerpo = f"""
-Reporte Diario del Precio del Oro
-================================
+def obtener_precio(simbolo):
+    url = f"https://api.gold-api.com/price/{simbolo}"
+    respuesta = requests.get(url, timeout=10)
+    respuesta.raise_for_status()
+    datos = respuesta.json()
+    return float(datos["price"])
 
-Fecha: {fecha}
-Precio XAU/USD: ${price:.2f}
-Actualizado: {updated}
+def construir_mensaje(precio_oro, precio_plata, razon):
+    fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+    cuerpo = f"""Reporte de metales preciosos — {fecha}
 
---------------------------------
-Bot autónomo ejecutado con GitHub Actions
+Oro (XAU):   ${precio_oro:,.2f} USD por onza
+Plata (XAG): ${precio_plata:,.2f} USD por onza
+
+Razón oro/plata: {razon:.2f}
+(cuántas onzas de plata equivalen a una onza de oro)
 """
-        
-        msg = MIMEMultipart()
-        msg['From'] = GMAIL_USER
-        msg['To'] = DESTINATARIO
-        msg['Subject'] = asunto
-        msg.attach(MIMEText(cuerpo, 'plain'))
-        
-        # Enviar correo
-        with smtplib.SMTP('smtp.gmail.com', 587) as server:
-            server.starttls()
-            server.login(GMAIL_USER, GMAIL_APP_PASSWORD)
-            server.send_message(msg)
-        
-        print(f"[{fecha}] Correo enviado correctamente → ${price:.2f}")
-        
-    except Exception as e:
-        print(f"Error: {e}")
-        raise
+    return cuerpo
+
+def enviar_correo(cuerpo):
+    mensaje = MIMEText(cuerpo)
+    mensaje["Subject"] = "Reporte diario: Oro, Plata y Razón Oro/Plata"
+    mensaje["From"] = GMAIL_USER
+    mensaje["To"] = DESTINATARIO
+
+    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as servidor:
+        servidor.login(GMAIL_USER, GMAIL_APP_PASSWORD)
+        servidor.send_message(mensaje)
 
 if __name__ == "__main__":
-    enviar_reporte()
+    precio_oro = obtener_precio("XAU")
+    precio_plata = obtener_precio("XAG")
+    razon = precio_oro / precio_plata
+
+    cuerpo = construir_mensaje(precio_oro, precio_plata, razon)
+    enviar_correo(cuerpo)
+    print("Correo enviado correctamente.")
+    print(cuerpo)
