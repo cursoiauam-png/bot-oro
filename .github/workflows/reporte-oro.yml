@@ -23,4 +23,4 @@ jobs:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           DESTINATARIO: ${{ secrets.DESTINATARIO }}
-           run: python gold_bot.py
+        run: python gold_bot.py
