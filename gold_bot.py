@@ -15,8 +15,17 @@ def obtener_precio(simbolo):
     datos = respuesta.json()
     return float(datos["price"])
 
+def interpretar_razon(razon):
+    if razon < 40:
+        return "La plata está relativamente cara frente al oro (razón baja para estándares históricos)."
+    elif razon > 80:
+        return "El oro está relativamente caro frente a la plata (razón alta para estándares históricos)."
+    else:
+        return "La razón se encuentra en un rango intermedio, sin una señal extrema en ningún sentido."
+
 def construir_mensaje(precio_oro, precio_plata, razon):
     fecha = datetime.now().strftime("%d/%m/%Y %H:%M")
+    interpretacion = interpretar_razon(razon)
     cuerpo = f"""Reporte de metales preciosos — {fecha}
 
 Oro (XAU):   ${precio_oro:,.2f} USD por onza
@@ -24,6 +33,8 @@ Plata (XAG): ${precio_plata:,.2f} USD por onza
 
 Razón oro/plata: {razon:.2f}
 (cuántas onzas de plata equivalen a una onza de oro)
+
+Lectura del día: {interpretacion}
 """
     return cuerpo
 
